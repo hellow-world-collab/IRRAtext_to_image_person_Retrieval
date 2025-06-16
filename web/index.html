@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <title>YOLOv8 文本检索 Demo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>YOLOv8 + IRRA 检索</h1>
+
+    <label class="file-btn">
+      选择视频
+      <input type="file" id="file" accept="video/*" hidden>
+    </label>
+    <p id="fileName" class="info">未选择</p>
+
+    <input type="text" id="text"
+           placeholder="如：a man in red hoodie">
+
+    <button id="upload" class="primary">上传并检索</button>
+
+    <div id="progressWrap" hidden>
+      <p id="progText">上传中…</p>
+      <progress id="progBar" value="0" max="100"></progress>
+    </div>
+
+    <video id="player" controls hidden></video>
+    <a id="download" hidden>下载结果</a>
+  </main>
+
+  <footer>© 2025 Demo | Browser-friendly H.264 自动播放</footer>
+  <script src="script.js"></script>
+</body>
+</html>
