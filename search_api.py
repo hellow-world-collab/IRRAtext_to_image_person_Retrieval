@@ -1,4 +1,4 @@
-# 文件名: search_api.py (完整代码)
+# 文件名: search_api.py (修改后)
 
 import sys, os, cv2, uuid, tempfile, subprocess, asyncio, threading, shutil
 from pathlib import Path
@@ -19,7 +19,7 @@ router = APIRouter()
 progress = {}
 
 
-# ---------- 工具函数 (视频处理) ----------
+# ---------- 工具函数 (视频处理) - 修改处 ----------
 def mp4_to_h264(src: str) -> str:
     cap = cv2.VideoCapture(src)
     if not cap.isOpened(): return src
@@ -39,7 +39,10 @@ def mp4_to_h264(src: str) -> str:
     return str(dst)
 
 
-def run_test_cli_for_video(video: str, query: str, out_mp4: str):
+def run_test_cli_for_video(video: str, query: str, out_mp4: str, threshold: float):
+    """
+    修改：增加了 threshold 参数
+    """
     cmd = [
         sys.executable, "testforpth.py",
         "--config_file", IRRA_CONFIG,
@@ -47,7 +50,7 @@ def run_test_cli_for_video(video: str, query: str, out_mp4: str):
         "--video_path", video,
         "--output_video_path", out_mp4,
         "--text_query", query,
-        "--similarity_threshold", "0.25",  # 视频的阈值可以保持不变
+        "--similarity_threshold", str(threshold),  # <-- 使用传入的阈值
         "--process_every_n_frames", "5"
     ]
     print(">>", " ".join(cmd), flush=True)
@@ -55,7 +58,7 @@ def run_test_cli_for_video(video: str, query: str, out_mp4: str):
                           stderr=subprocess.STDOUT, text=True, encoding='utf-8')
 
 
-# --- 最终版：同时接收阈值参数的图片检索工具函数 ---
+# --- 图片检索工具函数 (保持不变) ---
 def run_test_cli_for_image(image: str, query: str, out_img: str, threshold: float):
     cmd = [
         sys.executable, "testforpth.py",
@@ -64,7 +67,7 @@ def run_test_cli_for_image(image: str, query: str, out_img: str, threshold: floa
         "--input_image_path", image,
         "--output_image_path", out_img,
         "--text_query", query,
-        "--similarity_threshold", str(threshold),  # <--- 使用从网页传入的阈值
+        "--similarity_threshold", str(threshold),
     ]
     print(">>", " ".join(cmd), flush=True)
     return subprocess.run(cmd, stdout=subprocess.PIPE,
@@ -84,9 +87,13 @@ async def progress_sse(tid: str):
     return StreamingResponse(events(), media_type="text/event-stream")
 
 
-# ---------- /search (视频) ----------
+# ---------- /search (视频) - 修改处 ----------
 @router.post("/search")
-async def search(video: UploadFile = File(...), query: str = Form(...)):
+async def search(
+    video: UploadFile = File(...),
+    query: str = Form(...),
+    threshold: float = Form(...)  # <-- 接收阈值
+):
     if not video.filename.lower().endswith((".mp4", ".avi", ".mov", ".mkv")):
         raise HTTPException(400, "仅支持视频文件")
     tid = uuid.uuid4().hex[:8]
@@ -100,7 +107,8 @@ async def search(video: UploadFile = File(...), query: str = Form(...)):
     def worker():
         try:
             progress[tid] = 10
-            res = run_test_cli_for_video(tmp_vid, query, str(out_mp4))
+            # 将阈值传递给处理函数
+            res = run_test_cli_for_video(tmp_vid, query, str(out_mp4), threshold)
             if res.returncode != 0:
                 progress[tid] = ("ERR", res.stdout[:400])
                 return
@@ -126,20 +134,18 @@ def fetch_result(tid: str):
     return FileResponse(payload, media_type="video/mp4", filename=Path(payload).name)
 
 
-# --- 最终版: 图片检索路由 (整合所有修复) ---
+# --- 图片检索路由 (保持不变) ---
 @router.post("/search_image")
 async def search_image(
         image: UploadFile = File(...),
         query: str = Form(...),
         threshold: float = Form(...)
 ):
-    # 1. 验证文件类型
     allowed_image_types = (".jpg", ".jpeg", ".png", ".bmp", ".webp")
     original_filename = image.filename
     if not original_filename.lower().endswith(allowed_image_types):
         raise HTTPException(400, "仅支持图片文件 (jpg, png, bmp, webp)")
 
-    # 2. 使用 UUID 生成安全路径
     original_suffix = Path(original_filename).suffix
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=original_suffix)
     out_img = tempfile.NamedTemporaryFile(delete=False, suffix=original_suffix)
@@ -149,14 +155,11 @@ async def search_image(
     tmp_img.close()
     out_img.close()
 
-    # 3. 保存上传图片到临时文件
     with open(tmp_img_path, "wb") as f:
         shutil.copyfileobj(image.file, f)
 
-    # 4. 调用测试脚本，传入路径与阈值
     res = run_test_cli_for_image(str(tmp_img_path), query, str(out_img_path), threshold)
 
-    # 5. 检查执行结果
     if res.returncode != 0 or not out_img_path.exists():
         error_output = res.stdout if res.stdout else "No output from script."
         print("--- Subprocess Error ---")
@@ -164,6 +167,5 @@ async def search_image(
         print("--- End Subprocess Error ---")
         raise HTTPException(500, detail=f"推理脚本执行失败:\n{error_output}")
 
-    # 6. 返回图片响应，注意: 临时文件不会马上删除
     return FileResponse(str(out_img_path), media_type=image.content_type,
                         filename="result_" + original_filename)
