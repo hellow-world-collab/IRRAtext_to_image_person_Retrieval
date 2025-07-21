@@ -51,7 +51,7 @@ def run_test_cli_for_video(video: str, query: str, out_mp4: str, threshold: floa
         "--output_video_path", out_mp4,
         "--text_query", query,
         "--similarity_threshold", str(threshold),  # <-- 使用传入的阈值
-        "--process_every_n_frames", "5"
+        "--process_every_n_frames", "10"
     ]
     print(">>", " ".join(cmd), flush=True)
     return subprocess.run(cmd, stdout=subprocess.PIPE,
