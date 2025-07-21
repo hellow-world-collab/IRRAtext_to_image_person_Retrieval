@@ -21,22 +21,58 @@ progress = {}
 
 # ---------- 工具函数 (视频处理) - 修改处 ----------
 def mp4_to_h264(src: str) -> str:
-    cap = cv2.VideoCapture(src)
-    if not cap.isOpened(): return src
-    fps, w, h = cap.get(5) or 25, int(cap.get(3)), int(cap.get(4))
-    p = Path(src)
-    dst = p.with_name(p.stem + "_h264.mp4")
-    writer = cv2.VideoWriter(str(dst), cv2.VideoWriter_fourcc(*"avc1"), fps, (w, h))
-    if not writer.isOpened():
-        cap.release()
+    """
+    使用 FFmpeg 将视频文件转换为浏览器兼容的 H.264 格式。
+
+    Args:
+        src (str): 输入的视频文件路径。
+
+    Returns:
+        str: 转换后的 H.264 视频文件路径。如果转换失败，则返回原始路径。
+    """
+    if not os.path.exists(src):
+        print(f"Error: Source file for conversion does not exist: {src}")
         return src
-    while True:
-        ok, frame = cap.read()
-        if not ok: break
-        writer.write(frame)
-    cap.release();
-    writer.release()
-    return str(dst)
+
+    p = Path(src)
+    # 创建一个新的文件名给转码后的视频，避免覆盖
+    dst = p.with_name(f"{p.stem}_h264.mp4")
+
+    # 构建 FFmpeg 命令
+    # -i: 输入文件
+    # -c:v libx264: 使用 H.264 编码器
+    # -pix_fmt yuv420p: 确保最大的浏览器兼容性
+    # -preset veryfast: 在速度和质量之间取得良好平衡
+    # -y: 如果输出文件已存在则覆盖
+    command = [
+        "ffmpeg",
+        "-i", str(p),
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        "-preset", "veryfast",
+        "-y",
+        str(dst)
+    ]
+
+    print(f"INFO: Running FFmpeg command: {' '.join(command)}")
+    try:
+        # 执行命令，并隐藏FFmpeg自身的日志输出
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        print(f"INFO: FFmpeg conversion successful. Output: {dst}")
+        # 转换成功，删除旧文件，返回新文件路径
+        if os.path.exists(str(p)):
+            os.remove(str(p))
+        return str(dst)
+    except FileNotFoundError:
+        print("ERROR: 'ffmpeg' command not found. Please ensure FFmpeg is installed and in your system's PATH.")
+        # FFmpeg未找到，无法转换，返回原文件
+        return str(p)
+    except subprocess.CalledProcessError as e:
+        # FFmpeg 执行出错
+        print(f"ERROR: FFmpeg conversion failed. Return code: {e.returncode}")
+        print(f"FFmpeg stderr: {e.stderr}")
+        # 转换失败，返回原文件
+        return str(p)
 
 
 def run_test_cli_for_video(video: str, query: str, out_mp4: str, threshold: float):
@@ -113,13 +149,15 @@ async def search(
                 progress[tid] = ("ERR", res.stdout[:400])
                 return
             progress[tid] = 90
+            # 【确认这一行是激活的】
+            # 它会调用我们上面修改好的基于FFmpeg的转码函数
             final = mp4_to_h264(str(out_mp4))
             progress[tid] = ("DONE", final)
         except Exception as e:
             progress[tid] = ("ERR", str(e))
         finally:
+            # 清理最初上传的临时文件
             if os.path.exists(tmp_vid): os.remove(tmp_vid)
-
     threading.Thread(target=worker, daemon=True).start()
     return {"task_id": tid}
 
