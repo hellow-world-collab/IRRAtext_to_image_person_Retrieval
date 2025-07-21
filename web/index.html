@@ -2,67 +2,132 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <title>YOLOv8 文本检索 Demo</title>
+  <title>多功能视频分析平台</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main class="card">
-    <div class="mode-selector">
-      <label for="modeSwitcher">选择模式:</label>
-      <select id="modeSwitcher">
-        <option value="video">视频文本搜索</option>
-        <option value="image">图片文本搜索</option>
-      </select>
+  <div id="app-container">
+    <!-- 侧边栏菜单 -->
+    <nav id="sidebar">
+      <div class="sidebar-header">
+        <h3>智能分析平台</h3>
+      </div>
+      <ul class="menu-links">
+        <li data-page="person-search-page" class="active">
+          <a href="#"><i class="fas fa-user-check"></i><span>全身行人检索</span></a>
+        </li>
+        <li data-page="clip-search-page">
+          <a href="#"><i class="fas fa-film"></i><span>视频片段检索</span></a>
+        </li>
+        <li data-page="history-page">
+          <a href="#"><i class="fas fa-history"></i><span>操作历史</span></a>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div id="main-content">
+      <button id="menu-toggle"><i class="fas fa-bars"></i></button>
+
+      <!-- 页面1: 全身行人检索 (您原来的功能) -->
+      <main id="person-search-page" class="page-content card">
+        <div class="mode-selector">
+          <label for="modeSwitcher">选择模式:</label>
+          <select id="modeSwitcher">
+            <option value="video">视频文本搜索</option>
+            <option value="image">图片文本搜索</option>
+          </select>
+        </div>
+
+        <!-- 行人检索 -> 视频面板 -->
+        <div id="video-search-panel">
+          <h1>YOLOv8 + IRRA 视频检索</h1>
+          <label class="file-btn">
+            选择视频
+            <input type="file" id="file" accept="video/*" hidden>
+          </label>
+          <p id="fileName" class="info">未选择</p>
+          <input type="text" id="text" placeholder="如：a man in red hoodie">
+          <div class="threshold-container">
+            <label for="videoThreshold">相似度阈值:</label>
+            <input type="number" id="videoThreshold" value="0.25" step="0.01" min="0" max="1">
+          </div>
+          <button id="upload" class="primary">上传并检索 (视频)</button>
+          <div id="progressWrap" hidden>
+            <p id="progText">上传中…</p>
+            <progress id="progBar" value="0" max="100"></progress>
+          </div>
+          <video id="player" controls hidden></video>
+          <a id="download" hidden>下载结果</a>
+        </div>
+
+        <!-- 行人检索 -> 图片面板 -->
+        <div id="image-search-panel" class="hidden">
+          <h1>YOLOv8 + IRRA 图片检索</h1>
+          <label class="file-btn">
+            选择图片
+            <input type="file" id="imageFile" accept="image/*" hidden>
+          </label>
+          <p id="imageFileName" class="info">未选择</p>
+          <input type="text" id="imageQuery" placeholder="如：a person in blue shirt">
+          <div class="threshold-container">
+            <label for="threshold">相似度阈值:</label>
+            <input type="number" id="threshold" value="0.15" step="0.01" min="0" max="1">
+          </div>
+          <button id="imageSearchBtn" class="primary">上传并检索 (图片)</button>
+          <p id="imageStatus" class="info"></p>
+          <div id="imageResultWrap" hidden>
+            <img id="resultImage" />
+            <br>
+            <a id="downloadImage" >下载结果图片</a>
+          </div>
+        </div>
+      </main>
+
+      <!-- 页面2: 视频片段检索 (已更新) -->
+      <main id="clip-search-page" class="page-content card hidden">
+        <h1>Clip4Clip 视频片段检索</h1>
+        <label class="file-btn">
+          选择视频
+          <input type="file" id="clipFile" accept="video/*" hidden>
+        </label>
+        <p id="clipFileName" class="info">未选择</p>
+        <input type="text" id="clipQuery" placeholder="如：a man playing guitar">
+
+        <!-- ==================== 【修改点】 ==================== -->
+        <div class="threshold-container">
+          <label for="clipTopN">返回片段数:</label>
+          <input type="number" id="clipTopN" value="1" step="1" min="1" max="5">
+        </div>
+        <div class="threshold-container">
+          <label for="clipThreshold">相似度阈值:</label>
+          <input type="number" id="clipThreshold" value="0.20" step="0.01" min="0" max="1">
+        </div>
+        <!-- ======================================================= -->
+
+        <button id="clipUploadBtn" class="primary">上传并检索片段</button>
+        <div id="clipProgressWrap" hidden>
+          <p id="clipProgText">上传中…</p>
+          <progress id="clipProgBar" value="0" max="100"></progress>
+        </div>
+        <div id="clipResultsWrap"></div>
+      </main>
+
+      <!-- 页面3: 操作历史 (新功能) -->
+      <main id="history-page" class="page-content card hidden">
+        <div class="history-header">
+          <h1>操作历史</h1>
+          <button id="clearHistoryBtn" class="small-btn">清空历史</button>
+        </div>
+        <div id="historyList">
+          <p class="info">暂无历史记录。</p>
+        </div>
+      </main>
+
+      <footer style="text-align: center; width: 100%; padding-top: 2rem;">© 2025 智能分析平台</footer>
     </div>
-
-    <div id="video-search-panel">
-      <h1>YOLOv8 + IRRA 视频检索</h1>
-      <label class="file-btn">
-        选择视频
-        <input type="file" id="file" accept="video/*" hidden>
-      </label>
-      <p id="fileName" class="info">未选择</p>
-      <input type="text" id="text" placeholder="如：a man in red hoodie">
-
-      <div class="threshold-container">
-        <label for="videoThreshold">相似度阈值:</label>
-        <input type="number" id="videoThreshold" value="0.25" step="0.01" min="0" max="1">
-      </div>
-
-      <button id="upload" class="primary">上传并检索 (视频)</button>
-      <div id="progressWrap" hidden>
-        <p id="progText">上传中…</p>
-        <progress id="progBar" value="0" max="100"></progress>
-      </div>
-      <video id="player" controls hidden></video>
-      <a id="download" hidden>下载结果</a>
-    </div>
-
-    <div id="image-search-panel" class="hidden">
-      <h1>YOLOv8 + IRRA 图片检索</h1>
-      <label class="file-btn">
-        选择图片
-        <input type="file" id="imageFile" accept="image/*" hidden>
-      </label>
-      <p id="imageFileName" class="info">未选择</p>
-      <input type="text" id="imageQuery" placeholder="如：a person in blue shirt">
-
-      <div class="threshold-container">
-        <label for="threshold">相似度阈值:</label>
-        <input type="number" id="threshold" value="0.15" step="0.01" min="0" max="1">
-      </div>
-
-      <button id="imageSearchBtn" class="primary">上传并检索 (图片)</button>
-      <p id="imageStatus" class="info"></p>
-      <div id="imageResultWrap" hidden>
-        <img id="resultImage" />
-        <br>
-        <a id="downloadImage" >下载结果图片</a>
-      </div>
-    </div>
-  </main>
-
-  <footer>© 2025 Demo | 视频/图片双功能检索</footer>
+  </div>
   <script src="script.js"></script>
 </body>
 </html>
