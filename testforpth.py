@@ -1,7 +1,10 @@
+import os
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import argparse
 import cv2
 import torch
-import os
 import os.path as op
 from PIL import Image
 from ultralytics import YOLO
@@ -77,14 +80,24 @@ def process_single_image(frame, yolo_model, irra_model, text_features, irra_img_
 
 
 def main(cli_args):
-    # --- 模型加载 (与之前相同) ---
+    # --- 1. Initialization ---
     args = load_train_configs(cli_args.config_file)
     args.training = False
     logger = setup_logger('IRRA_Search', save_dir=args.output_dir, if_train=args.training)
-    logger.info("Loaded IRRA Configs: %s", args)
-    logger.info("CLI Args: %s", cli_args)
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    logger.info(f"Using device: {device}")
+    logger.info("CLI Args: %s", cli_args)
 
+    # Load YOLO model
+    try:
+        yolo_model = YOLO(cli_args.yolo_model_path)
+        yolo_model.to(device)
+        logger.info(f"Loaded YOLO model from {cli_args.yolo_model_path}")
+    except Exception as e:
+        logger.error(f"Error loading YOLO model: {e}")
+        return
+
+    # Load IRRA model
     try:
         num_classes_for_model = args.num_classes if hasattr(args, 'num_classes') else 3701
         irra_model = build_irra_model(args, num_classes=num_classes_for_model)
@@ -102,21 +115,15 @@ def main(cli_args):
     irra_model.eval()
     logger.info(f"Loaded IRRA model from {model_path}")
 
-    try:
-        yolo_model = YOLO(cli_args.yolo_model_path)
-        yolo_model.to(device)
-        logger.info(f"Loaded YOLO model from {cli_args.yolo_model_path}")
-    except Exception as e:
-        logger.error(f"Error loading YOLO model: {e}")
-        return
-
-    # --- 文本特征提取 (与之前相同) ---
+    # --- 2. Pre-compute text features ---
     text_length = args.text_length if hasattr(args, 'text_length') else 77
     irra_tokenizer = SimpleTokenizer()
     tokenized_query = tokenize(cli_args.text_query, irra_tokenizer, text_length=text_length, truncate=True).unsqueeze(
         0).to(device)
-    with torch.no_grad():
+
+    with torch.no_grad(), torch.amp.autocast(device_type="cuda", dtype=torch.float16):
         text_features = irra_model.encode_text(tokenized_query)
+
     text_features = text_features / text_features.norm(dim=-1, keepdim=True)
     logger.info(f"Generated text features for query: '{cli_args.text_query}'")
 
@@ -124,6 +131,7 @@ def main(cli_args):
     img_w = args.img_size[1] if hasattr(args, 'img_size') and args.img_size else 128
     irra_img_transforms = build_transforms(img_size=(img_h, img_w), is_train=False)
 
+    # --- 3. Video Processing ---
     if cli_args.video_path:
         cap = cv2.VideoCapture(cli_args.video_path)
         if not cap.isOpened():
@@ -133,15 +141,14 @@ def main(cli_args):
         frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = int(cap.get(cv2.CAP_PROP_FPS)) or 25
-
         output_path = cli_args.output_video_path
-        output_dir_path = os.path.dirname(output_path)
-        if output_dir_path and not os.path.exists(output_dir_path):
-            os.makedirs(output_dir_path)
-
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out_writer = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
         logger.info(f"Processing video: {cli_args.video_path}. Output will be saved to: {output_path}")
+
+        target_track_id = None
+        identified_track_ids = set()
 
         frame_idx = 0
         while cap.isOpened():
@@ -152,8 +159,80 @@ def main(cli_args):
                 out_writer.write(frame)
                 continue
 
-            annotated_frame = process_single_image(frame, yolo_model, irra_model, text_features, irra_img_transforms,
-                                                   cli_args, logger)
+            yolo_results = yolo_model.track(frame, persist=True, classes=[0], conf=0.4, verbose=False)
+
+            # --- THIS IS THE KEY CHANGE ---
+            # Instead of using YOLO's default plot, create a clean copy of the frame.
+            # We will draw our own boxes selectively.
+            annotated_frame = frame.copy()
+
+            # If we've already found our target, just draw its box.
+            if target_track_id is not None:
+                found_target_in_frame = False
+                if yolo_results[0].boxes.id is not None:
+                    for box, track_id in zip(yolo_results[0].boxes, yolo_results[0].boxes.id.int().tolist()):
+                        if track_id == target_track_id:
+                            x1, y1, x2, y2 = map(int, box.xyxy[0])
+                            # Draw the green box for the found target
+                            cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 3)
+                            text_to_display = "Target Found"
+                            text_y_pos = y1 - 10 if y1 > 20 else y1 + 15
+                            cv2.putText(annotated_frame, text_to_display, (x1, text_y_pos),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                            found_target_in_frame = True
+                            break
+                if not found_target_in_frame:
+                    logger.warning(f"Target with track ID {target_track_id} lost. Resuming search.")
+                    target_track_id = None
+
+            # If we haven't found the target yet, search for it.
+            if target_track_id is None and yolo_results[0].boxes.id is not None:
+                new_persons_crops_pil = []
+                new_persons_track_ids = []
+                new_persons_boxes = []  # Store boxes to draw later
+
+                for box, track_id in zip(yolo_results[0].boxes, yolo_results[0].boxes.id.int().tolist()):
+                    if track_id in identified_track_ids:
+                        continue
+
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    if x1 >= x2 or y1 >= y2: continue
+                    crop_np = frame[y1:y2, x1:x2]
+                    if crop_np.size == 0: continue
+
+                    crop_pil = Image.fromarray(cv2.cvtColor(crop_np, cv2.COLOR_BGR2RGB))
+                    new_persons_crops_pil.append(crop_pil)
+                    new_persons_track_ids.append(track_id)
+                    new_persons_boxes.append((x1, y1, x2, y2))  # Keep track of the box
+
+                if new_persons_crops_pil:
+                    transformed_crops_batch = torch.stack([irra_img_transforms(p) for p in new_persons_crops_pil]).to(
+                        device)
+
+                    with torch.no_grad(), torch.amp.autocast(device_type="cuda", dtype=torch.float16):
+                        batch_img_feats = irra_model.encode_image(transformed_crops_batch)
+
+                    batch_img_feats = batch_img_feats / batch_img_feats.norm(dim=-1, keepdim=True)
+                    similarities = (text_features @ batch_img_feats.T).squeeze(0)
+
+                    identified_track_ids.update(new_persons_track_ids)
+
+                    if similarities.numel() > 0:
+                        best_similarity_score, best_idx = torch.max(similarities, dim=0)
+                        if best_similarity_score.item() >= cli_args.similarity_threshold:
+                            target_track_id = new_persons_track_ids[best_idx.item()]
+                            logger.info(
+                                f"Found target! Assigned Track ID: {target_track_id} with similarity {best_similarity_score.item():.2f}")
+                            identified_track_ids.add(target_track_id)
+
+                            # Draw the box for the newly found target
+                            x1, y1, x2, y2 = new_persons_boxes[best_idx.item()]
+                            cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 3)
+                            text_to_display = "Target Found"
+                            text_y_pos = y1 - 10 if y1 > 20 else y1 + 15
+                            cv2.putText(annotated_frame, text_to_display, (x1, text_y_pos),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
             out_writer.write(annotated_frame)
 
         cap.release()
@@ -161,20 +240,15 @@ def main(cli_args):
         logger.info(f"Finished processing video. Output saved to {output_path}")
 
     elif cli_args.input_image_path:
-        # --- 图片处理逻辑 ---
+        logger.info(f"Processing a single image...")
         img = cv2.imread(cli_args.input_image_path)
-        if img is None:
-            logger.error(f"Error: Could not read image {cli_args.input_image_path}")
-            return
+        if img is None: logger.error(f"Could not read image {cli_args.input_image_path}"); return
 
-        output_path = cli_args.output_image_path
-        output_dir_path = os.path.dirname(output_path)
-        if output_dir_path and not os.path.exists(output_dir_path):
-            os.makedirs(output_dir_path)
-
-        logger.info(f"Processing image: {cli_args.input_image_path}. Output will be saved to: {output_path}")
         annotated_image = process_single_image(img, yolo_model, irra_model, text_features, irra_img_transforms,
                                                cli_args, logger)
+
+        output_path = cli_args.output_image_path
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         cv2.imwrite(output_path, annotated_image)
         logger.info(f"Finished processing image. Output saved to {output_path}")
 
@@ -184,18 +258,14 @@ def main(cli_args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="IRRA-YOLO Video/Image Person Search")
-    # 修改--video_path为非必需
     parser.add_argument("--video_path", type=str, default=None,
                         help="Path to the input video file.")
     parser.add_argument("--output_video_path", type=str, default="output_searched_video.mp4",
                         help="Path to save the processed video with annotations.")
-    # 新增图片输入/输出参数
     parser.add_argument("--input_image_path", type=str, default=None,
                         help="Path to the input image file.")
     parser.add_argument("--output_image_path", type=str, default="output_searched_image.jpg",
                         help="Path to save the processed image with annotations.")
-
-    # 保持其他参数不变
     parser.add_argument("--config_file", type=str, required=True,
                         help="Path to IRRA model's training config YAML file.")
     parser.add_argument("--yolo_model_path", type=str, default="yolov8n.pt",
