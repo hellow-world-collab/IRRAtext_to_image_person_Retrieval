@@ -1,9 +1,10 @@
-// 文件名: script.js (完整版)
-// 描述: 实现了页面切换、全身行人检索、Clip片段检索和历史记录三大功能
+// 文件名: script.js (最终完整修正版)
+// 描述: 包含所有页面的功能，并修复了语法和作用域问题。
 
 document.addEventListener('DOMContentLoaded', () => {
 
     const $ = id => document.getElementById(id);
+    const ITEMS_PER_PAGE = 10; // 每页显示10条
 
     // --- 全局元素 ---
     const appContainer = $("app-container");
@@ -11,34 +12,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuLinks = document.querySelectorAll('.menu-links li');
     const pages = document.querySelectorAll('.page-content');
 
-    // --- 菜单和页面切换逻辑 ---
-    menuToggle.addEventListener('click', () => {
-        appContainer.classList.toggle('sidebar-open');
-    });
-
-    menuLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const pageId = link.getAttribute('data-page');
-            pages.forEach(page => page.classList.toggle('hidden', page.id !== pageId));
-            menuLinks.forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
-            if (pageId === 'history-page') loadHistory();
-            if (window.innerWidth < 768) appContainer.classList.remove('sidebar-open');
-        });
-    });
-
     // --- 页面1: 全身行人检索 (Person Search) ---
     const personSearchPage = $("person-search-page");
     if (personSearchPage) {
+        // 模式切换逻辑
         const modeSwitcher = personSearchPage.querySelector("#modeSwitcher");
         const videoPanel = personSearchPage.querySelector("#video-search-panel");
         const imagePanel = personSearchPage.querySelector("#image-search-panel");
-
-        modeSwitcher.addEventListener('change', (e) => {
-            videoPanel.classList.toggle('hidden', e.target.value !== 'video');
-            imagePanel.classList.toggle('hidden', e.target.value !== 'image');
-        });
+        if(modeSwitcher) {
+            modeSwitcher.addEventListener('change', (e) => {
+                videoPanel.classList.toggle('hidden', e.target.value !== 'video');
+                imagePanel.classList.toggle('hidden', e.target.value !== 'image');
+            });
+        }
 
         // 视频检索元素和逻辑
         const fInput = personSearchPage.querySelector("#file"), fName = personSearchPage.querySelector("#fileName"), query = personSearchPage.querySelector("#text");
@@ -46,8 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const player = personSearchPage.querySelector("#player"), dl = personSearchPage.querySelector("#download");
         const videoThresholdInput = personSearchPage.querySelector("#videoThreshold");
 
-        fInput.onchange = () => { fName.textContent = fInput.files[0]?.name || "未选择"; };
-        btn.onclick = () => {
+        if(fInput) fInput.onchange = () => { fName.textContent = fInput.files[0]?.name || "未选择"; };
+        if(btn) btn.onclick = () => {
             if (!fInput.files.length || !query.value.trim()) return alert("请选择视频并输入检索文字！");
             const form = new FormData();
             form.append("video", fInput.files[0]);
@@ -79,7 +65,13 @@ document.addEventListener('DOMContentLoaded', () => {
             es.onmessage = ev => bar.value = parseInt(ev.data, 10);
             es.addEventListener('done', (ev) => {
                 es.close();
-                fetchPersonSearchResult(ev.data);
+                const ossUrl = ev.data;
+                wrap.hidden = true;
+                player.src = ossUrl;
+                player.hidden = false;
+                dl.href = ossUrl;
+                dl.download = ossUrl.split('/').pop();
+                dl.hidden = false;
             });
             es.addEventListener('err', (ev) => {
                 es.close();
@@ -88,31 +80,14 @@ document.addEventListener('DOMContentLoaded', () => {
             es.onerror = () => { es.close(); };
         }
 
-        function fetchPersonSearchResult(tid) {
-            const resultUrl = `/result/${tid}`;
-            fetch(resultUrl).then(r => {
-                if (!r.ok) { r.json().then(err => alert(`获取结果失败: ${err.detail}`)); return; }
-                return r.blob();
-            }).then(blob => {
-                if (!blob) return;
-                wrap.hidden = true;
-                const objectURL = URL.createObjectURL(blob);
-                player.src = objectURL;
-                player.hidden = false;
-                dl.href = objectURL;
-                dl.download = `result_${tid}.mp4`;
-                dl.hidden = false;
-            }).catch(err => alert("获取结果文件时发生网络错误。"));
-        }
-
         // 图片检索元素和逻辑
         const imgInput = personSearchPage.querySelector("#imageFile"), imgName = personSearchPage.querySelector("#imageFileName"), imgQuery = personSearchPage.querySelector("#imageQuery");
         const imgBtn = personSearchPage.querySelector("#imageSearchBtn"), imgStatus = personSearchPage.querySelector("#imageStatus");
         const imgResultWrap = personSearchPage.querySelector("#imageResultWrap"), resImg = personSearchPage.querySelector("#resultImage"), imgDl = personSearchPage.querySelector("#downloadImage");
         const thresholdInput = personSearchPage.querySelector("#threshold");
 
-        imgInput.onchange = () => { imgName.textContent = imgInput.files[0]?.name || "未选择"; };
-        imgBtn.onclick = async () => {
+        if(imgInput) imgInput.onchange = () => { imgName.textContent = imgInput.files[0]?.name || "未选择"; };
+        if(imgBtn) imgBtn.onclick = async () => {
             if (!imgInput.files.length || !imgQuery.value.trim()) return alert("请选择图片并输入检索文字！");
             const formData = new FormData();
             formData.append("image", imgInput.files[0]);
@@ -122,10 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const response = await fetch("/search_image", { method: "POST", body: formData });
                 if (!response.ok) throw new Error((await response.json()).detail);
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                resImg.src = url;
-                imgDl.href = url;
+                const data = await response.json();
+                const ossUrl = data.result_url;
+                resImg.src = ossUrl;
+                imgDl.href = ossUrl;
                 imgDl.download = `result_${imgInput.files[0].name}`;
                 imgResultWrap.hidden = false;
                 imgStatus.textContent = "检索完成！";
@@ -137,53 +112,40 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- 页面2: 视频片段检索 (已更新) ---
-    const clipPage = document.getElementById("clip-search-page");
+    // --- 页面2: 视频片段检索 (Clip Search) ---
+    const clipPage = $("clip-search-page");
     if (clipPage) {
         const clipFileInput = clipPage.querySelector("#clipFile"), clipFileName = clipPage.querySelector("#clipFileName");
         const clipQueryInput = clipPage.querySelector("#clipQuery"), clipTopNInput = clipPage.querySelector("#clipTopN");
-        const clipThresholdInput = clipPage.querySelector("#clipThreshold"); // 【新增】获取阈值输入框
+        const clipThresholdInput = clipPage.querySelector("#clipThreshold");
         const clipUploadBtn = clipPage.querySelector("#clipUploadBtn");
         const clipProgressWrap = clipPage.querySelector("#clipProgressWrap"), clipProgBar = clipPage.querySelector("#clipProgBar"), clipProgText = clipPage.querySelector("#clipProgText");
         const clipResultsWrap = clipPage.querySelector("#clipResultsWrap");
 
-        clipFileInput.onchange = () => { clipFileName.textContent = clipFileInput.files[0]?.name || "未选择"; };
-
-        clipUploadBtn.onclick = () => {
-            if (!clipFileInput.files.length || !clipQueryInput.value.trim()) {
-                return alert("请选择视频并输入检索文字！");
-            }
-
+        if(clipFileInput) clipFileInput.onchange = () => { clipFileName.textContent = clipFileInput.files[0]?.name || "未选择"; };
+        if(clipUploadBtn) clipUploadBtn.onclick = () => {
+            if (!clipFileInput.files.length || !clipQueryInput.value.trim()) return alert("请选择视频并输入检索文字！");
             const formData = new FormData();
             formData.append("video", clipFileInput.files[0]);
             formData.append("query", clipQueryInput.value.trim());
             formData.append("top_n", clipTopNInput.value);
-            formData.append("threshold", clipThresholdInput.value); // 【新增】添加阈值到表单
-
-            clipProgressWrap.hidden = false;
-            clipProgBar.value = 0;
-            clipProgText.textContent = "上传中...";
-            clipUploadBtn.disabled = true;
-            clipResultsWrap.innerHTML = '';
-
+            formData.append("threshold", clipThresholdInput.value);
+            clipProgressWrap.hidden = false; clipProgBar.value = 0; clipProgText.textContent = "上传中...";
+            clipUploadBtn.disabled = true; clipResultsWrap.innerHTML = '';
             const xhr = new XMLHttpRequest();
             xhr.open("POST", "/clip/search", true);
             xhr.upload.onprogress = e => {
                 if (e.lengthComputable) {
                     const pct = Math.round((e.loaded / e.total) * 100);
                     clipProgBar.value = pct;
-                    if (pct === 100) {
-                        clipProgText.textContent = "服务器处理中，请稍候...";
-                    }
+                    if (pct === 100) clipProgText.textContent = "服务器处理中，请稍候...";
                 }
             };
             xhr.responseType = "json";
             xhr.onload = () => {
                 clipUploadBtn.disabled = false;
                 clipProgressWrap.hidden = true;
-                if (xhr.status !== 200) {
-                    return alert(`错误: ${xhr.response?.detail || xhr.statusText}`);
-                }
+                if (xhr.status!== 200) return alert(`错误: ${xhr.response?.detail || xhr.statusText}`);
                 displayClipResults(xhr.response.results);
             };
             xhr.onerror = () => {
@@ -195,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         function displayClipResults(results) {
-            // ... (此函数内容保持不变) ...
             if (!results || results.length === 0) {
                 clipResultsWrap.innerHTML = '<p class="info">未能找到高于设定阈值的匹配片段。</p>';
                 return;
@@ -216,63 +177,132 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 页面3: 操作历史 (History) ---
     const historyPage = $("history-page");
-    if (historyPage) {
-        const historyList = historyPage.querySelector("#historyList");
-        const clearHistoryBtn = historyPage.querySelector("#clearHistoryBtn");
+    async function loadHistory(page = 1) {
+        const historyTableBody = historyPage.querySelector("#historyTableBody");
+        const paginationContainer = historyPage.querySelector("#pagination-container");
+        if (!historyTableBody || !paginationContainer) return;
 
-        async function loadHistory() {
-            try {
-                historyList.innerHTML = '<p class="info">正在加载历史记录...</p>';
-                const response = await fetch('/history');
-                const data = await response.json();
-                renderHistory(data.history);
-            } catch (error) {
-                historyList.innerHTML = '<p class="info">加载历史记录失败。</p>';
-            }
-        }
+        try {
+            historyTableBody.innerHTML = '<tr><td colspan="5" class="no-history-row">正在加载历史记录...</td></tr>';
+            paginationContainer.innerHTML = '';
 
-        clearHistoryBtn.onclick = async () => {
-            if (!confirm("确定要清空所有历史记录吗？此操作不可恢复。")) return;
-            try {
-                await fetch('/history', { method: 'DELETE' });
-                loadHistory();
-            } catch (error) {
-                alert("清空历史记录失败。");
-            }
-        };
+            const response = await fetch(`/history?page=${page}&limit=${ITEMS_PER_PAGE}`);
+            if (!response.ok) throw new Error("无法从服务器获取历史记录。");
 
-        function renderHistory(historyData) {
-            if (!historyData || historyData.length === 0) {
-                historyList.innerHTML = '<p class="info">暂无历史记录。</p>';
-                return;
-            }
-            historyList.innerHTML = '';
-            historyData.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'history-item';
-                let iconClass = 'fa-question-circle';
-                let previewHTML = '';
-                if (item.type === '全身行人检索') {
-                    iconClass = 'fa-user-check';
-                    previewHTML = `<a href="${item.result_url}" target="_blank"><video src="${item.result_url}" preload="metadata"></video></a>`;
-                } else if (item.type === '图片内容检索') {
-                    iconClass = 'fa-image';
-                    previewHTML = `<a href="${item.result_url}" target="_blank"><img src="${item.result_url}" alt="检索结果"></a>`;
-                } else if (item.type === '视频片段检索' && item.results?.length > 0) {
-                    iconClass = 'fa-film';
-                    previewHTML = `<a href="${item.results[0].video_url}" target="_blank"><video src="${item.results[0].video_url}" preload="metadata"></video></a>`;
-                }
-                div.innerHTML = `
-                    <div class="history-item-icon"><i class="fas ${iconClass}"></i></div>
-                    <div class="history-item-content">
-                        <h5>${item.type}</h5>
-                        <p>查询: <strong>${item.query}</strong></p>
-                        <span class="timestamp">${item.timestamp}</span>
-                    </div>
-                    <div class="history-item-preview">${previewHTML}</div>
-                `;
-                historyList.appendChild(div);
-            });
+            const data = await response.json();
+            renderHistory(data.items);
+            renderPagination(data.page, data.pages);
+
+        } catch (error) {
+            historyTableBody.innerHTML = `<tr><td colspan="5" class="no-history-row">加载历史记录失败: ${error.message}</td></tr>`;
         }
     }
+
+    function renderHistory(historyData) {
+        const historyTableBody = historyPage.querySelector("#historyTableBody");
+        if (!historyTableBody) return;
+
+        if (!historyData || historyData.length === 0) {
+            historyTableBody.innerHTML = '<tr class="no-history-row"><td colspan="5">暂无历史记录。</td></tr>';
+            return;
+        }
+
+        historyTableBody.innerHTML = '';
+        historyData.forEach(item => {
+            const row = document.createElement('tr');
+            let iconClass = 'fa-question-circle', previewHTML = '<span>无预览</span>';
+
+            if (item.operation_type === '全身行人检索' && item.result_url) {
+                iconClass = 'fa-user-check';
+                previewHTML = `<a href="${item.result_url}" target="_blank"><video src="${item.result_url}" preload="metadata"></video></a>`;
+            } else if (item.operation_type === '图片内容检索' && item.result_url) {
+                iconClass = 'fa-image';
+                previewHTML = `<a href="${item.result_url}" target="_blank"><img src="${item.result_url}" alt="检索结果"></a>`;
+            } else if (item.operation_type === '视频片段检索') {
+                iconClass = 'fa-film';
+                try {
+                    const details = JSON.parse(item.details || '{}');
+                    const firstClip = details.results?.[0];
+                    if(firstClip && firstClip.video_url) {
+                        previewHTML = `<a href="${firstClip.video_url}" target="_blank"><video src="${firstClip.video_url}" preload="metadata"></video></a>`;
+                    }
+                } catch(e) { console.error("Error parsing history details:", e); }
+            }
+
+            row.innerHTML = `
+                <td>${item.id}</td>
+                <td><i class="fas ${iconClass}"></i> ${item.operation_type}</td>
+                <td class="query-text">${item.query_text || 'N/A'}</td>
+                <td class="preview-cell">${previewHTML}</td>
+                <td>${item.timestamp}</td>
+            `;
+            historyTableBody.appendChild(row);
+        });
+    }
+
+    function renderPagination(currentPage, totalPages) {
+        const paginationContainer = historyPage.querySelector("#pagination-container");
+        if (!paginationContainer) return;
+
+        paginationContainer.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const prevButton = document.createElement('button');
+        prevButton.innerHTML = `<i class="fas fa-angle-left"></i>`;
+        prevButton.className = 'pagination-btn';
+        prevButton.disabled = currentPage === 1;
+        prevButton.onclick = () => loadHistory(currentPage - 1);
+        paginationContainer.appendChild(prevButton);
+
+        for (let i = 1; i <= totalPages; i++) {
+            const pageButton = document.createElement('button');
+            pageButton.textContent = i;
+            pageButton.className = 'pagination-btn';
+            if (i === currentPage) pageButton.classList.add('active');
+            pageButton.onclick = () => loadHistory(i);
+            paginationContainer.appendChild(pageButton);
+        }
+
+        const nextButton = document.createElement('button');
+        nextButton.innerHTML = `<i class="fas fa-angle-right"></i>`;
+        nextButton.className = 'pagination-btn';
+        nextButton.disabled = currentPage === totalPages;
+        nextButton.onclick = () => loadHistory(currentPage + 1);
+        paginationContainer.appendChild(nextButton);
+    }
+
+    if (historyPage) {
+        const clearHistoryBtn = historyPage.querySelector("#clearHistoryBtn");
+        if(clearHistoryBtn) {
+            clearHistoryBtn.onclick = async () => {
+                if (!confirm("确定要清空所有历史记录吗？")) return;
+                try {
+                    await fetch('/history', { method: 'DELETE' });
+                    loadHistory(1);
+                } catch (error) {
+                    alert("清空历史记录失败。");
+                }
+            };
+        }
+    }
+
+    // --- 全局事件监听 ---
+    if(menuToggle) menuToggle.addEventListener('click', () => {
+        appContainer.classList.toggle('sidebar-open');
+    });
+
+    menuLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const pageId = link.getAttribute('data-page');
+            pages.forEach(page => page.classList.toggle('hidden', page.id !== pageId));
+            menuLinks.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+
+            if (pageId === 'history-page') {
+                loadHistory(1);
+            }
+            if (window.innerWidth < 768) appContainer.classList.remove('sidebar-open');
+        });
+    });
 });

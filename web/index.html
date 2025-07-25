@@ -120,10 +120,24 @@
           <h1>操作历史</h1>
           <button id="clearHistoryBtn" class="small-btn">清空历史</button>
         </div>
-        <div id="historyList">
-          <p class="info">暂无历史记录。</p>
+        <div class="table-container">
+          <table id="historyTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>操作类型</th>
+                <th>查询内容</th>
+                <th>结果预览</th>
+                <th>操作时间</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              </tbody>
+          </table>
         </div>
-      </main>
+        <div id="pagination-container">
+          </div>
+        </main>
 
       <footer style="text-align: center; width: 100%; padding-top: 2rem;">© 2025 智能分析平台</footer>
     </div>

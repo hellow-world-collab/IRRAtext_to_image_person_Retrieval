@@ -15,17 +15,15 @@
 body{
   background: var(--bg);
   color: var(--fg);
-  overflow-x: hidden; /* 防止出现水平滚动条 */
+  overflow-x: hidden;
 }
 
-/* --- App 整体布局 --- */
 #app-container {
   display: flex;
   position: relative;
   width: 100%;
 }
 
-/* --- 侧边栏样式 --- */
 #sidebar {
   position: fixed;
   top: 0;
@@ -36,7 +34,7 @@ body{
   border-right: 1px solid #e0e0e0;
   padding: 1.5rem 1rem;
   transition: transform var(--transition-speed) ease-in-out;
-  transform: translateX(-100%); /* 默认隐藏在左侧 */
+  transform: translateX(-100%);
   z-index: 1000;
 }
 
@@ -75,11 +73,10 @@ body{
 .menu-links li a i {
   margin-right: 1rem;
   font-size: 1.2rem;
-  width: 20px; /* 固定图标宽度，让文字对齐 */
+  width: 20px;
   text-align: center;
 }
 
-/* --- 主内容区样式 --- */
 #main-content {
   width: 100%;
   padding: 2rem;
@@ -91,7 +88,6 @@ body{
   min-height: 100vh;
 }
 
-/* --- 菜单按钮样式 --- */
 #menu-toggle {
   position: fixed;
   top: 1.5rem;
@@ -107,11 +103,10 @@ body{
   font-size: 1.2rem;
   color: var(--fg);
   cursor: pointer;
-  z-index: 1001; /* 确保在侧边栏之上 */
+  z-index: 1001;
   transition: all var(--transition-speed) ease-in-out;
 }
 
-/* --- 侧边栏打开时的状态变化 --- */
 #app-container.sidebar-open #sidebar {
   transform: translateX(0);
 }
@@ -124,15 +119,15 @@ body{
   left: calc(var(--sidebar-width) + 1.5rem);
 }
 
-/* --- 页面内容通用样式 --- */
 .page-content {
   width: 100%;
+  max-width: 1200px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 .hidden {
-  display: none !important;
+  display: none!important;
 }
 
 .card {
@@ -140,20 +135,20 @@ body{
   padding: 2rem 2.5rem;
   box-shadow: var(--shadow);
   border-radius: var(--radius);
-  width: clamp(300px, 90vw, 600px); /* 稍微加宽以容纳新内容 */
+  width: clamp(300px, 90%, 800px);
   text-align: center;
 }
 
 h1{margin-bottom:1rem;font-weight:600;color:var(--accent); font-size: 1.5rem;}
-.file-btn,.primary{cursor:pointer;border:none;border-radius:var(--radius);padding:.7rem 1.3rem;font-size:1rem;font-weight:600;transition:all .25s}
+.file-btn,.primary{cursor:pointer;border:none;border-radius:var(--radius);padding:.7rem 1.3rem;font-size:1rem;font-weight:600;transition:all.25s}
 .file-btn{background:#e4eaf1;color:#555;margin-top:1rem}
 .file-btn:hover{background:#d7dfe8}
-.primary{background:var(--accent);color:#fff;margin:1.2rem auto .5rem}
+.primary{background:var(--accent);color:#fff;margin:1.2rem auto.5rem}
 .primary:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
-#text, #imageQuery, #clipQuery {width:100%;padding:.6rem .8rem;border:1px solid #ccc;border-radius:var(--radius);margin-top:1rem;font-size:1rem}
+#text, #imageQuery, #clipQuery {width:100%;padding:.6rem.8rem;border:1px solid #ccc;border-radius:var(--radius);margin-top:1rem;font-size:1rem}
 .threshold-container { margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .threshold-container label { font-size: 0.9rem; color: #555; }
-#threshold, #videoThreshold, #clipTopN { width: 80px; padding: .4rem; border: 1px solid #ccc; border-radius: var(--radius); }
+#threshold, #videoThreshold, #clipTopN, #clipThreshold { width: 80px; padding:.4rem; border: 1px solid #ccc; border-radius: var(--radius); }
 #progressWrap, #clipProgressWrap {margin-top:1rem;text-align:left; width: 100%;}
 progress{width:100%;height:.8rem;appearance:none}
 progress::-webkit-progress-bar{background:#e8ecf1;border-radius:var(--radius)}
@@ -166,7 +161,10 @@ progress::-webkit-progress-value{background:var(--accent);border-radius:var(--ra
 #downloadImage { margin-top: 1rem; display: inline-block; color: var(--accent); font-weight: 600; }
 footer{margin-top:2rem;font-size:.8rem;color:#999}
 
-/* --- 新增：Clip片段检索结果容器样式 --- */
+.mode-selector { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 1.5rem; border-bottom: 1px solid #e8ecf1; padding-bottom: 1.5rem; }
+.mode-selector label { font-weight: 600; color: #555; }
+.mode-selector select { padding:.5rem.8rem; border: 1px solid #ccc; border-radius: var(--radius); font-size: 1rem; background-color: #fff; }
+
 #clipResultsWrap {
   margin-top: 1.5rem;
   text-align: left;
@@ -198,7 +196,7 @@ footer{margin-top:2rem;font-size:.8rem;color:#999}
   font-size: 0.9rem;
 }
 
-/* --- 新增：历史记录页面样式 --- */
+/* --- 历史记录页面样式 --- */
 .history-header {
   display: flex;
   justify-content: space-between;
@@ -219,50 +217,134 @@ footer{margin-top:2rem;font-size:.8rem;color:#999}
 .small-btn:hover {
   background: #d7dfe8;
 }
-#historyList {
+
+.table-container {
   width: 100%;
+  overflow-x: auto;
+  margin-top: 1rem;
+  border: 1px solid #e8ecf1;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  background: #fff;
+}
+
+#historyTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+#historyTable thead th {
+  background-color: #f9fafb;
+  padding: 14px 18px;
   text-align: left;
-  max-height: 60vh;
-  overflow-y: auto;
+  font-weight: 600;
+  color: #444;
+  border-bottom: 2px solid #e0e0e0;
 }
-.history-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  padding: 1rem;
+
+#historyTable tbody td {
+  padding: 14px 18px;
   border-bottom: 1px solid #e8ecf1;
+  vertical-align: middle;
 }
-.history-item:last-child {
+
+#historyTable tbody tr:last-child td {
   border-bottom: none;
 }
-.history-item-icon {
-  font-size: 1.5rem;
-  color: var(--accent);
-  margin-top: 0.25rem;
+
+#historyTable tbody tr:nth-child(even) {
+  background-color: #fdfdfd;
 }
-.history-item-content {
-  flex-grow: 1;
+
+#historyTable tbody tr:hover {
+  background-color: #f5f8ff;
 }
-.history-item-content h5 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-.history-item-content p {
-  font-size: 0.9rem;
-  color: #555;
-  margin-bottom: 0.5rem;
+
+/* ==================== 【核心修正点】 ==================== */
+/* 修正了选择器，从 #id.class 改为 #id .class */
+
+#historyTable .query-text {
+  max-width: 200px;
   word-break: break-all;
 }
-.history-item-content .timestamp {
-  font-size: 0.75rem;
-  color: #999;
+
+#historyTable .preview-cell {
+    width: 100px;
 }
-.history-item-preview img, .history-item-preview video {
-  width: 100px;
-  height: 100px;
-  object-fit: cover;
+
+#historyTable .preview-cell a {
+  display: block;
+  width: 80px;
+  height: 80px;
   border-radius: var(--radius);
-  cursor: pointer;
+  overflow: hidden;
   border: 1px solid #ddd;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#historyTable .preview-cell img,
+#historyTable .preview-cell video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#historyTable .preview-cell a:hover img,
+#historyTable .preview-cell a:hover video {
+  transform: scale(1.1);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+#historyTable .no-history-row td {
+  text-align: center;
+  padding: 3rem;
+  color: #999;
+  font-style: italic;
+}
+/* ======================================================== */
+
+/* --- 分页控件样式 --- */
+#pagination-container {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.pagination-btn {
+  border: 1px solid #dcdfe6;
+  background-color: #fff;
+  color: #606266;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pagination-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.pagination-btn.active {
+  background-color: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.pagination-btn:disabled {
+  color: #c0c4cc;
+  background-color: #f4f4f5;
+  border-color: #e9e9eb;
+  cursor: not-allowed;
 }
