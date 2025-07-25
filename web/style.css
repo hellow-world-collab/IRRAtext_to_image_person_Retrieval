@@ -1,5 +1,7 @@
+/* 文件名: web/style.css (已修正) */
+/* 全局样式和变量 */
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap");
-:root{
+:root {
   --accent: #1e88ff;
   --bg: #f4f7fa;
   --fg: #333;
@@ -10,341 +12,69 @@
   --transition-speed: 0.3s;
 }
 
-*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+body { background: var(--bg); color: var(--fg); overflow-x: hidden; }
 
-body{
-  background: var(--bg);
-  color: var(--fg);
-  overflow-x: hidden;
-}
-
-#app-container {
-  display: flex;
-  position: relative;
-  width: 100%;
-}
-
+/* 布局和侧边栏 */
+#app-container { display: flex; position: relative; width: 100%; }
 #sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  width: var(--sidebar-width);
-  background: var(--sidebar-bg);
-  border-right: 1px solid #e0e0e0;
-  padding: 1.5rem 1rem;
-  transition: transform var(--transition-speed) ease-in-out;
-  transform: translateX(-100%);
-  z-index: 1000;
+  position: fixed; top: 0; left: 0; height: 100vh; width: var(--sidebar-width);
+  background: var(--sidebar-bg); border-right: 1px solid #e0e0e0;
+  padding: 1.5rem 1rem; transition: transform var(--transition-speed) ease-in-out;
+  transform: translateX(-100%); z-index: 1000;
 }
-
-.sidebar-header {
-  margin-bottom: 2rem;
-  text-align: center;
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: var(--accent);
-}
-
-.menu-links {
-  list-style: none;
-}
-
+.sidebar-header { margin-bottom: 2rem; text-align: center; font-size: 1.2rem; font-weight: 600; color: var(--accent); }
+.menu-links { list-style: none; }
 .menu-links li a {
-  display: flex;
-  align-items: center;
-  text-decoration: none;
-  color: #555;
-  padding: 0.8rem 1rem;
-  border-radius: var(--radius);
-  margin-bottom: 0.5rem;
+  display: flex; align-items: center; text-decoration: none; color: #555;
+  padding: 0.8rem 1rem; border-radius: var(--radius); margin-bottom: 0.5rem;
   transition: background-color var(--transition-speed), color var(--transition-speed);
 }
-
-.menu-links li a:hover {
-  background-color: var(--bg);
-}
-
-.menu-links li.active a {
-  background-color: var(--accent);
-  color: #fff;
-}
-
-.menu-links li a i {
-  margin-right: 1rem;
-  font-size: 1.2rem;
-  width: 20px;
-  text-align: center;
-}
-
+.menu-links li a:hover { background-color: var(--bg); }
+.menu-links li.active a { background-color: var(--accent); color: #fff; }
+.menu-links li a i { margin-right: 1rem; font-size: 1.2rem; width: 20px; text-align: center; }
 #main-content {
-  width: 100%;
-  padding: 2rem;
-  transition: margin-left var(--transition-speed) ease-in-out;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
+  width: 100%; padding: 2rem; transition: margin-left var(--transition-speed) ease-in-out;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-start; min-height: 100vh;
 }
-
 #menu-toggle {
-  position: fixed;
-  top: 1.5rem;
-  left: 1.5rem;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 50%;
-  width: 45px;
-  height: 45px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  color: var(--fg);
-  cursor: pointer;
-  z-index: 1001;
+  position: fixed; top: 1.5rem; left: 1.5rem; background: #fff;
+  border: 1px solid #e0e0e0; border-radius: 50%; width: 45px; height: 45px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; color: var(--fg); cursor: pointer; z-index: 1001;
   transition: all var(--transition-speed) ease-in-out;
 }
+#app-container.sidebar-open #sidebar { transform: translateX(0); }
+#app-container.sidebar-open #main-content { margin-left: var(--sidebar-width); }
+#app-container.sidebar-open #menu-toggle { left: calc(var(--sidebar-width) + 1.5rem); }
 
-#app-container.sidebar-open #sidebar {
-  transform: translateX(0);
-}
-
-#app-container.sidebar-open #main-content {
-  margin-left: var(--sidebar-width);
-}
-
-#app-container.sidebar-open #menu-toggle {
-  left: calc(var(--sidebar-width) + 1.5rem);
-}
-
-.page-content {
-  width: 100%;
-  max-width: 1200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.hidden {
-  display: none!important;
-}
-
+/* 通用页面和卡片样式 */
+#page-container { width: 100%; max-width: 1200px; }
+.page-content { display: flex; flex-direction: column; align-items: center; }
+.hidden { display: none !important; }
 .card {
-  background: #fff;
-  padding: 2rem 2.5rem;
-  box-shadow: var(--shadow);
-  border-radius: var(--radius);
-  width: clamp(300px, 90%, 800px);
+  background: #fff; padding: 2rem 2.5rem; box-shadow: var(--shadow);
+  border-radius: var(--radius); width: clamp(300px, 100%, 800px);
   text-align: center;
 }
-
-h1{margin-bottom:1rem;font-weight:600;color:var(--accent); font-size: 1.5rem;}
-.file-btn,.primary{cursor:pointer;border:none;border-radius:var(--radius);padding:.7rem 1.3rem;font-size:1rem;font-weight:600;transition:all.25s}
-.file-btn{background:#e4eaf1;color:#555;margin-top:1rem}
-.file-btn:hover{background:#d7dfe8}
-.primary{background:var(--accent);color:#fff;margin:1.2rem auto.5rem}
-.primary:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
-#text, #imageQuery, #clipQuery {width:100%;padding:.6rem.8rem;border:1px solid #ccc;border-radius:var(--radius);margin-top:1rem;font-size:1rem}
+h1 { margin-bottom: 1rem; font-weight: 600; color: var(--accent); font-size: 1.5rem; }
+.file-btn, .primary {
+  cursor: pointer; border: none; border-radius: var(--radius);
+  padding: .7rem 1.3rem; font-size: 1rem; font-weight: 600; transition: all .25s;
+}
+.file-btn { background: #e4eaf1; color: #555; margin-top: 1rem; }
+.file-btn:hover { background: #d7dfe8; }
+.primary { background: var(--accent); color: #fff; margin: 1.2rem auto .5rem; }
+.primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+input[type="text"], input[type="number"], select {
+  width: 100%; padding: .6rem .8rem; border: 1px solid #ccc;
+  border-radius: var(--radius); margin-top: 1rem; font-size: 1rem;
+}
 .threshold-container { margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .threshold-container label { font-size: 0.9rem; color: #555; }
-#threshold, #videoThreshold, #clipTopN, #clipThreshold { width: 80px; padding:.4rem; border: 1px solid #ccc; border-radius: var(--radius); }
-#progressWrap, #clipProgressWrap {margin-top:1rem;text-align:left; width: 100%;}
-progress{width:100%;height:.8rem;appearance:none}
-progress::-webkit-progress-bar{background:#e8ecf1;border-radius:var(--radius)}
-progress::-webkit-progress-value{background:var(--accent);border-radius:var(--radius)}
-.info{font-size:.9rem;color:#777;margin-top:.4rem;min-height: 1.2em;}
-#player{width:100%;margin-top:1.2rem;border:1px solid #ccc;border-radius:var(--radius)}
-#download{display:inline-block;margin-top:1.2rem;color:var(--accent);font-weight:600}
-#imageResultWrap { margin-top: 1rem; }
-#resultImage { max-width: 100%; border-radius: var(--radius); border: 1px solid #ccc; }
-#downloadImage { margin-top: 1rem; display: inline-block; color: var(--accent); font-weight: 600; }
-footer{margin-top:2rem;font-size:.8rem;color:#999}
-
-.mode-selector { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 1.5rem; border-bottom: 1px solid #e8ecf1; padding-bottom: 1.5rem; }
-.mode-selector label { font-weight: 600; color: #555; }
-.mode-selector select { padding:.5rem.8rem; border: 1px solid #ccc; border-radius: var(--radius); font-size: 1rem; background-color: #fff; }
-
-#clipResultsWrap {
-  margin-top: 1.5rem;
-  text-align: left;
-  width: 100%;
-}
-.clip-result-item {
-  margin-bottom: 1.5rem;
-  border: 1px solid #e8ecf1;
-  border-radius: var(--radius);
-  padding: 1rem;
-}
-.clip-result-item h4 {
-  margin-bottom: 0.5rem;
-  color: var(--accent);
-}
-.clip-result-item p {
-  font-size: 0.9rem;
-  color: #666;
-  margin-bottom: 0.8rem;
-}
-.clip-result-item video {
-  width: 100%;
-  border-radius: var(--radius);
-  margin-bottom: 0.8rem;
-}
-.clip-result-item a {
-  font-weight: 600;
-  color: var(--accent);
-  font-size: 0.9rem;
-}
-
-/* --- 历史记录页面样式 --- */
-.history-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  margin-bottom: 1.5rem;
-}
-.small-btn {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.8rem;
-  background: #e4eaf1;
-  color: #555;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-.small-btn:hover {
-  background: #d7dfe8;
-}
-
-.table-container {
-  width: 100%;
-  overflow-x: auto;
-  margin-top: 1rem;
-  border: 1px solid #e8ecf1;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  background: #fff;
-}
-
-#historyTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-#historyTable thead th {
-  background-color: #f9fafb;
-  padding: 14px 18px;
-  text-align: left;
-  font-weight: 600;
-  color: #444;
-  border-bottom: 2px solid #e0e0e0;
-}
-
-#historyTable tbody td {
-  padding: 14px 18px;
-  border-bottom: 1px solid #e8ecf1;
-  vertical-align: middle;
-}
-
-#historyTable tbody tr:last-child td {
-  border-bottom: none;
-}
-
-#historyTable tbody tr:nth-child(even) {
-  background-color: #fdfdfd;
-}
-
-#historyTable tbody tr:hover {
-  background-color: #f5f8ff;
-}
-
-/* ==================== 【核心修正点】 ==================== */
-/* 修正了选择器，从 #id.class 改为 #id .class */
-
-#historyTable .query-text {
-  max-width: 200px;
-  word-break: break-all;
-}
-
-#historyTable .preview-cell {
-    width: 100px;
-}
-
-#historyTable .preview-cell a {
-  display: block;
-  width: 80px;
-  height: 80px;
-  border-radius: var(--radius);
-  overflow: hidden;
-  border: 1px solid #ddd;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-#historyTable .preview-cell img,
-#historyTable .preview-cell video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-#historyTable .preview-cell a:hover img,
-#historyTable .preview-cell a:hover video {
-  transform: scale(1.1);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-#historyTable .no-history-row td {
-  text-align: center;
-  padding: 3rem;
-  color: #999;
-  font-style: italic;
-}
-/* ======================================================== */
-
-/* --- 分页控件样式 --- */
-#pagination-container {
-  margin-top: 2rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.pagination-btn {
-  border: 1px solid #dcdfe6;
-  background-color: #fff;
-  color: #606266;
-  padding: 0;
-  width: 36px;
-  height: 36px;
-  font-size: 0.9rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.pagination-btn:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-.pagination-btn.active {
-  background-color: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-  font-weight: 600;
-}
-
-.pagination-btn:disabled {
-  color: #c0c4cc;
-  background-color: #f4f4f5;
-  border-color: #e9e9eb;
-  cursor: not-allowed;
-}
+.threshold-container input[type="number"] { width: 80px; padding:.4rem; }
+progress { width: 100%; height: .8rem; appearance: none; }
+progress::-webkit-progress-bar { background: #e8ecf1; border-radius: var(--radius); }
+progress::-webkit-progress-value { background: var(--accent); border-radius: var(--radius); }
+.info { font-size: .9rem; color: #777; margin-top: .4rem; min-height: 1.2em; }

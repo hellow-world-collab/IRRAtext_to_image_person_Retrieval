@@ -2,13 +2,15 @@
 # 描述: 修正了 /history 接口，确保 datetime 对象被正确格式化为字符串
 import os, sys, asyncio, uvicorn, logging, math
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Query
+from typing import List
+
+from fastapi import FastAPI, Query, Body
 from datetime import datetime
 
 # --- 导入模块 ---
 from person_searcher import PersonSearcher
 from video_retriever import VideoRetriever
-from config_mysql.database import get_history_paginated, clear_all_history
+from config_mysql.database import get_history_paginated, clear_all_history,delete_history_ids
 
 # —— 配置 ——
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -93,4 +95,18 @@ async def get_history_paginated_api(page: int = Query(1, gt=0), limit: int = Que
 async def clear_history_from_db():
     clear_all_history()
     return {"message": "历史记录已清空"}
+
+@app.delete("/history/selected")
+async def delete_selected_history(ids: List[int] = Body(..., embed=True)):
+    """
+    根据ID列表删除指定的历史记录。
+    前端应发送格式为 {"ids": [1, 2, 3]} 的JSON。
+    """
+    if not ids:
+        return {"message": "未提供任何ID。"}
+    success = delete_history_ids(ids)
+    if success:
+        return {"message": f"成功删除 {len(ids)} 条记录。"}
+    else:
+        return {"error": "删除操作失败。"}, 500
 
