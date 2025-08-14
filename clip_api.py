@@ -1,6 +1,3 @@
-# 文件名: clip_api.py (完整版)
-# 描述: 正确处理从 video_retriever 返回的本地路径并上传到OSS
-
 import os, tempfile, logging, json
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException

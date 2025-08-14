@@ -1,6 +1,3 @@
-# 文件名: video_retriever.py (完整版)
-# 描述: 确保返回结果中包含本地文件路径，以便API层进行上传
-
 import os
 import cv2
 import torch

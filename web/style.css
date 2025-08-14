@@ -78,3 +78,54 @@ progress { width: 100%; height: .8rem; appearance: none; }
 progress::-webkit-progress-bar { background: #e8ecf1; border-radius: var(--radius); }
 progress::-webkit-progress-value { background: var(--accent); border-radius: var(--radius); }
 .info { font-size: .9rem; color: #777; margin-top: .4rem; min-height: 1.2em; }
+
+
+#player:not([hidden]),
+#resultImage:not([hidden]),
+#clipResultsWrap video {
+  max-width: 100%;
+  height: auto;                     /* 自动计算高度以保持原始宽高比，防止拉伸变形 */
+  margin-top: 1rem;                 /* 与上方元素保持一些间距 */
+  border-radius: var(--radius);     /* 使用预设的圆角变量，与整体风格统一 */
+  background-color: #f0f0f0;        /* 为媒体加载前提供一个浅灰色背景 */
+  display: block;                   /* 将元素设置为块级，确保margin等属性生效 */
+}
+
+#resultImage:not([hidden]) {
+  /* 如果您希望进一步限制图片的最大高度，防止图片过于“瘦长”，可以取消下面这行注释 */
+  /* max-height: 70vh; */ /* vh是视窗高度单位，70vh代表屏幕可见高度的70% */
+}
+
+
+#clipResultsWrap {
+    width: 100%;
+    text-align: left; /* 让列表内的文本左对齐，而不是继承父级的居中 */
+    margin-top: 1.5rem;
+}
+
+.clip-result-item {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  border-radius: var(--radius);
+}
+
+.clip-result-item h4 {
+  color: var(--accent);
+}
+
+.clip-result-item p {
+  margin-bottom: 0.75rem;
+}
+
+.clip-result-item a {
+  font-size: 0.9rem;
+  color: var(--accent);
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+.clip-result-item a:hover {
+  text-decoration: underline;
+}

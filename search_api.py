@@ -1,13 +1,9 @@
-# 文件名: search_api.py (OSS集成最终版)
-# 描述: 将处理结果上传到OSS并存入数据库
-
 import os, uuid, tempfile, subprocess, asyncio, threading, shutil, logging
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from datetime import datetime
 
-# --- 从主应用导入所需内容 ---
 from yolo_api import MODELS, cleanup_files
 from config_mysql.database import add_history_record
 from config_mysql.oss_utils import upload_to_oss
@@ -107,14 +103,12 @@ async def search_image(image: UploadFile = File(...), query: str = Form(...), th
                                            output_path=tmp_out_path)
         if not success: raise HTTPException(500, "图像处理失败。")
 
-        # 【核心修改】上传到OSS并存入数据库
         oss_url = upload_to_oss(tmp_out_path)
         if oss_url:
             add_history_record(
                 operation_type="图片内容检索", query_text=query,
                 result_url=oss_url, timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             )
-            # 对于图片，直接返回包含永久URL的JSON
             return JSONResponse(content={"result_url": oss_url})
         else:
             raise HTTPException(500, "文件上传到OSS失败。")

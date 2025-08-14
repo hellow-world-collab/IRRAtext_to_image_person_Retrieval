@@ -1,8 +1,3 @@
-# filename: person_searcher.py (Final Corrected Version)
-# description: Implements the user's requested logic:
-#              1. Expands the crop area BEFORE sending to the IRRA model for better context.
-#              2. Draws the final green target box at its ORIGINAL size for precision.
-
 import os
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -22,9 +17,6 @@ from datasets.build import build_transforms
 
 
 class PersonSearcher:
-    """
-    A class that encapsulates YOLO and IRRA models for text-based image retrieval.
-    """
 
     def __init__(self, irra_config_file: str, yolo_model_path: str):
         self.logger = setup_logger('IRRA_Search_Service', save_dir="logs", if_train=False)
@@ -63,7 +55,6 @@ class PersonSearcher:
         self.logger.info("PersonSearcher initialized successfully.")
 
     def _get_text_features(self, text_query: str):
-        # This function remains unchanged
         text_length = self.irra_args.get('text_length', 77)
         tokenized_query = tokenize(text_query, self.irra_tokenizer, text_length=text_length, truncate=True).unsqueeze(
             0).to(self.device)
@@ -73,7 +64,6 @@ class PersonSearcher:
         return text_features
 
     def search_in_image(self, image_path: str, text_query: str, similarity_threshold: float, output_path: str):
-        # This function's logic remains largely the same for simplicity
         self.logger.info(f"Starting search in image: {image_path}")
         frame = cv2.imread(image_path)
         if frame is None:
@@ -135,23 +125,19 @@ class PersonSearcher:
             frame_idx += 1
             yolo_results = self.yolo_model.track(frame, persist=True, classes=[0], conf=0.5, verbose=False)
 
-            # Store the latest original (unexpanded) coordinates for all tracked persons
             if yolo_results[0].boxes.id is not None:
                 for box in yolo_results[0].boxes:
                     track_id = box.id.int().item()
                     original_boxes[track_id] = tuple(map(int, box.xyxy[0]))
 
-            # ==================== CORE CHANGE 1: EXPAND CROP FOR IRRA MODEL ====================
             if frame_idx % process_every_n_frames == 0 and target_track_id is None:
                 if yolo_results[0].boxes.id is not None:
                     crops, track_ids_for_irra = [], []
 
-                    # First, draw all ORIGINAL-sized yellow boxes on this frame
                     for box in yolo_results[0].boxes:
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
                         cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
 
-                    # Now, create EXPANDED crops to send to IRRA
                     for box in yolo_results[0].boxes:
                         track_id = box.id.int().item()
                         if track_id in identified_track_ids: continue
@@ -164,7 +150,7 @@ class PersonSearcher:
                         y_expand = int(box_height * 0.30)
 
                         x1_exp = max(0, x1 - x_expand)
-                        y1_exp = y1  # Top remains the same
+                        y1_exp = y1
                         x2_exp = min(w, x2 + x_expand)
                         y2_exp = min(h, y2 + y_expand)
 
@@ -190,15 +176,12 @@ class PersonSearcher:
                                 self.logger.info(
                                     f"Found target! Track ID: {target_track_id}, Score: {best_score.item():.2f}")
             else:
-                # On non-matching frames, just draw the original-sized yellow boxes
                 if yolo_results[0].boxes.id is not None:
                     for box in yolo_results[0].boxes:
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
                         cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
 
-            # ==================== CORE CHANGE 2: DRAW ORIGINAL-SIZE GREEN BOX ====================
             if target_track_id is not None:
-                # Use the stored original box for the target ID
                 if target_track_id in original_boxes:
                     x1, y1, x2, y2 = original_boxes[target_track_id]
 
@@ -213,7 +196,7 @@ class PersonSearcher:
                                 (0, 255, 0), 2)
                 else:
                     self.logger.warning(f"Target with track ID {target_track_id} lost. Resuming search.")
-                    target_track_id = None  # Target lost, reset ID
+                    target_track_id = None
 
             out_writer.write(annotated_frame)
 

@@ -1,5 +1,4 @@
-# 文件名: yolo_api.py (已修复)
-# 描述: 修正了 /history 接口，确保 datetime 对象被正确格式化为字符串
+
 import os, sys, asyncio, uvicorn, logging, math
 from contextlib import asynccontextmanager
 from typing import List
@@ -7,25 +6,22 @@ from typing import List
 from fastapi import FastAPI, Query, Body
 from datetime import datetime
 
-# --- 导入模块 ---
+
 from person_searcher import PersonSearcher
 from video_retriever import VideoRetriever
 from config_mysql.database import get_history_paginated, clear_all_history,delete_history_ids
 
-# —— 配置 ——
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-# —— 模型和配置路径 (使用更高精度的YOLO) ——
 YOLO_WEIGHTS = "yolov8l.pt"
 IRRA_CONFIG = "logs/CUHK-PEDES/configs.yaml"
 CLIP_MODEL = "Searchium-ai/clip4clip-webvid150k"
 
-# —— 全局存储 ——
 MODELS = {}
 
-# —— 工具函数 ——
+
 def cleanup_files(paths: list[str]):
     for p in paths:
         if p and os.path.exists(p):
@@ -35,7 +31,7 @@ def cleanup_files(paths: list[str]):
             except OSError as e:
                 logging.warning(f"清理文件失败: {p}, 错误: {e}")
 
-# —— Lifespan 管理器 (保持不变) ——
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logging.info("Web App starting up...")
@@ -53,27 +49,24 @@ async def lifespan(app: FastAPI):
     logging.info("Web App shutting down...")
     MODELS.clear()
 
-# —— FastAPI 实例 ——
+
 app = FastAPI(
     title="Unified Vision API",
     version="7.3-FinalFix",
     lifespan=lifespan
 )
 
-# —— API 路由 ——
-# ==================== 【核心修改点：分页接口】 ====================
+
 @app.get("/history")
 async def get_history_paginated_api(page: int = Query(1, gt=0), limit: int = Query(10, gt=0)):
     """
     获取分页后的历史记录API端点。
     """
-    # ==================== 【核心修改点】 ====================
     # 调用新的数据库分页函数
     db_result = get_history_paginated(page=page, limit=limit)
 
     paginated_items = db_result["items"]
     total_items = db_result["total"]
-    # =======================================================
 
     total_pages = math.ceil(total_items / limit)
 
